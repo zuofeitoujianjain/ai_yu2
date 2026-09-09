@@ -1,0 +1,27 @@
+# aiyu 容器化部署（bot + NapCat）
+# 用法：在项目根目录新建 config.json 和 napcat-config 目录，再 `docker compose up -d`
+services:
+  napcat:
+    image: mlikiowa/napcat-docker:latest   # 或 NapNeko 官方其它镜像
+    container_name: napcat
+    restart: unless-stopped
+    ports:
+      - "3001:3001"     # OneBot v11 WebSocket（bot 连它）
+      - "6099:6099"     # NapCat WebUI（登录/配置用）
+    volumes:
+      - ./napcat-config:/app/napcat/config  # 挂载配置目录，便于持久化
+    environment:
+      - NAPCAT_UID=1000
+      # - NAPCAT_GID=1000
+    # 首次：浏览器打开 http://<主机IP>:6099/webui 扫码登录；并在"网络配置→OneBot11"开启 WebSocket服务器(正向) 3001
+
+  bot:
+    build: .
+    container_name: aiyu-bot
+    restart: unless-stopped
+    depends_on:
+      - napcat
+    volumes:
+      - ./config.json:/app/config.json:ro   # 你的配置（含 Key/令牌/大模型人设）
+      - ./memory.json:/app/memory.json      # 长期记忆持久化
+    # 注意：容器里 config.json 的 onebot_ws_url 要填 ws://napcat:3001（用服务名，不是 127.0.0.1）
